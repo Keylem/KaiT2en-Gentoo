@@ -230,7 +230,7 @@ outcome of the Bluetooth step is recorded in the installed system at:
 
 ## Applications
 
-`t2-fan-control`, `t2-smc-control`, `t2-power-explorer`, `t2-cpu-control`,
+`t2-fan-control`, `t2-smc-control`, `t2-power-explorer`, `t2-zone-power`,
 `t2-journal`, `kait2en-touchbar`, `kernel-builder`, and `t2-power-tune` are
 installed system-wide under `/usr/local`. `kait2en-touchbar` is optional and
 only installed when selected at the start of the installation.
@@ -247,7 +247,7 @@ All KAIT2EN desktop applications use the shared header wordmark at
 | T2 SMC Control | `/usr/local/bin/t2-smc-control`, `/usr/local/share/applications/org.t2smccontrol.gtk.desktop`, `/usr/local/share/icons/hicolor/scalable/apps/org.t2smccontrol.gtk.svg` |
 | T2 Power Explorer | `/usr/local/bin/t2-power-explorer`, `/usr/local/libexec/t2-power-explorer-status`, `/usr/local/share/applications/org.t2powerexplorer.gtk.desktop`, `/usr/local/share/icons/hicolor/scalable/apps/org.t2powerexplorer.gtk.svg`, `/usr/share/polkit-1/actions/org.t2powerexplorer.policy` |
 | T2 Journal | `/usr/local/bin/t2journal` |
-| T2 CPU Control | `/usr/local/bin/t2-cpu-control`, `/usr/local/libexec/t2-cpu-control-helper`, `/usr/local/libexec/t2-cpu-control-status`, `/usr/local/libexec/t2-cpu-kernel-benchmark`, `/usr/local/lib/systemd/system/t2-cpu-control.service`, `/usr/local/lib/systemd/system-sleep/t2-cpu-control`, `/usr/local/share/applications/org.t2cpucontrol.gtk.desktop`, `/usr/local/share/icons/hicolor/scalable/apps/org.t2cpucontrol.gtk.svg`, `/usr/share/polkit-1/actions/org.t2cpucontrol.policy` |
+| T2 Zone Power | `/usr/local/bin/t2-zonepower-gtk`, `/usr/local/share/applications/org.t2zonepower.gtk.desktop`, `/usr/local/share/icons/hicolor/scalable/apps/org.t2zonepower.gtk.svg`, `/usr/local/lib/systemd/system/t2-zonepowerd.service` |
 | T2 Kernel Builder | `/usr/local/bin/t2-kernel-builder`, `/usr/local/libexec/t2-kernel-builder-cleanup`, `/usr/local/libexec/t2-kernel-builder/build.sh`, `/usr/local/libexec/t2-kernel-builder/configs/*.config`, `/usr/local/share/applications/org.t2kernelbuilder.gtk.desktop`, `/usr/local/share/icons/hicolor/scalable/apps/org.t2kernelbuilder.gtk.svg`, `/usr/local/share/polkit-1/actions/org.t2kernelbuilder.gtk.policy` |
 | T2 Power Tune | `/usr/local/bin/t2-power-tune`, `/usr/local/libexec/t2-power-tune-helper`, `/usr/local/libexec/t2-power-tune-status`, `/usr/local/share/applications/org.t2powertune.gtk.desktop`, `/usr/local/share/icons/hicolor/scalable/apps/org.t2powertune.gtk.svg`, `/usr/share/polkit-1/actions/org.t2powertune.policy` |
 | T2 Force Click | `/usr/local/bin/t2-force-click`, `/usr/local/share/applications/org.t2forceclick.gtk.desktop`, `/usr/local/share/icons/hicolor/scalable/apps/org.t2forceclick.gtk.svg`, `/usr/local/lib/systemd/system/t2-force-click.service` |
