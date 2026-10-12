@@ -77,11 +77,15 @@ const LIGHT_PALETTE: ThemePalette = ThemePalette {
 /// One second of SMC zones and applied limits
 #[derive(Clone, Copy, Debug, Default)]
 struct Sample {
+    /// PZ*G is the short average, PZ*F the filtered value the SMC holds at the target
     heatpipe_w: Option<f64>,
+    heatpipe_filtered_w: Option<f64>,
     heatpipe_target_w: Option<f64>,
     cpu_w: Option<f64>,
+    cpu_filtered_w: Option<f64>,
     cpu_target_w: Option<f64>,
     gpu_w: Option<f64>,
+    gpu_filtered_w: Option<f64>,
     gpu_target_w: Option<f64>,
     heatpipe_throttle: Option<f64>,
     cpu_throttle: Option<f64>,
@@ -98,10 +102,13 @@ impl Sample {
         let fin = [sensors.celsius("Th1H"), sensors.celsius("Th2H")].into_iter().flatten().reduce(f64::max);
         Self {
             heatpipe_w: sensors.micro("PZ0G"),
+            heatpipe_filtered_w: sensors.micro("PZ0F"),
             heatpipe_target_w: sensors.micro("PZ0E"),
             cpu_w: sensors.micro("PZ1G"),
+            cpu_filtered_w: sensors.micro("PZ1F"),
             cpu_target_w: sensors.micro("PZ1E"),
             gpu_w: sensors.micro("PZ2G"),
+            gpu_filtered_w: sensors.micro("PZ2F"),
             gpu_target_w: sensors.micro("PZ2E"),
             heatpipe_throttle: sensors.micro("PZ0T"),
             cpu_throttle: sensors.micro("PZ1T"),
@@ -312,9 +319,12 @@ fn connect_drawings(model: &Rc<RefCell<AppModel>>, ui: &Rc<UiRefs>) {
             draw_target(cr, plot, latest.heatpipe_target_w, palette.heatpipe);
             draw_target(cr, plot, latest.cpu_target_w, palette.cpu);
             draw_target(cr, plot, latest.gpu_target_w, palette.gpu);
-            draw_history_series(cr, plot, &model.series(|s| s.heatpipe_w), palette.heatpipe);
-            draw_history_series(cr, plot, &model.series(|s| s.cpu_w), palette.cpu);
-            draw_history_series(cr, plot, &model.series(|s| s.gpu_w), palette.gpu);
+            draw_history_line(cr, plot, &model.series(|s| s.heatpipe_w), palette.heatpipe);
+            draw_history_line(cr, plot, &model.series(|s| s.cpu_w), palette.cpu);
+            draw_history_line(cr, plot, &model.series(|s| s.gpu_w), palette.gpu);
+            draw_history_series(cr, plot, &model.series(|s| s.heatpipe_filtered_w), palette.heatpipe);
+            draw_history_series(cr, plot, &model.series(|s| s.cpu_filtered_w), palette.cpu);
+            draw_history_series(cr, plot, &model.series(|s| s.gpu_filtered_w), palette.gpu);
         });
     }
     {
@@ -355,9 +365,9 @@ fn connect_drawings(model: &Rc<RefCell<AppModel>>, ui: &Rc<UiRefs>) {
 fn sync_ui(model: &AppModel, ui: &UiRefs) {
     let sample = model.latest();
     let applied = sample.applied;
-    ui.heatpipe.set_label(&format_zone(sample.heatpipe_w, sample.heatpipe_target_w));
-    ui.cpu_zone.set_label(&format_zone(sample.cpu_w, sample.cpu_target_w));
-    ui.gpu_zone.set_label(&format_zone(sample.gpu_w, sample.gpu_target_w));
+    ui.heatpipe.set_label(&format_zone(sample.heatpipe_filtered_w, sample.heatpipe_target_w));
+    ui.cpu_zone.set_label(&format_zone(sample.cpu_filtered_w, sample.cpu_target_w));
+    ui.gpu_zone.set_label(&format_zone(sample.gpu_filtered_w, sample.gpu_target_w));
     ui.fin_stack.set_label(&format_value(sample.fin_temp_c, " C"));
 
     let plimits = sample.plimits.unwrap_or_default();
@@ -501,6 +511,30 @@ fn draw_history_series(cr: &cairo::Context, plot: (f64, f64, f64, f64), values: 
             continue;
         };
         let (x, y) = point(index, *value);
+        if first {
+            cr.move_to(x, y);
+            first = false;
+        } else {
+            cr.line_to(x, y);
+        }
+    }
+    let _ = cr.stroke();
+}
+
+/// Thin pale line without fill for the short average behind the filtered value
+fn draw_history_line(cr: &cairo::Context, plot: (f64, f64, f64, f64), values: &[Option<f64>], color: (f64, f64, f64)) {
+    let denominator = (HISTORY_CAPACITY.saturating_sub(1)).max(1) as f64;
+    let start_index = HISTORY_CAPACITY.saturating_sub(values.len());
+    cr.set_source_rgba(color.0, color.1, color.2, 0.45);
+    cr.set_line_width(1.0);
+    let mut first = true;
+    for (index, value) in values.iter().enumerate() {
+        let Some(value) = value else {
+            first = true;
+            continue;
+        };
+        let x = plot.0 + plot.2 * ((start_index + index) as f64 / denominator);
+        let y = remap(value.clamp(0.0, 100.0), 0.0, 100.0, plot.1 + plot.3, plot.1);
         if first {
             cr.move_to(x, y);
             first = false;
