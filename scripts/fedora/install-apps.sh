@@ -34,28 +34,38 @@ remove_obsolete_apps() {
 
 # t2-zone-power replaces t2-cpu-control. Its helper restores the firmware
 # power limits, no_turbo, TCC target, maximum frequency and thermald state it
-# captured at boot, then everything it installed is removed.
+# captured at boot. Every step is skipped when there is nothing left to do,
+# so a removed or half removed installation is handled as well.
 remove_t2_cpu_control() {
-	local helper=/usr/local/libexec/t2-cpu-control-helper
+	local helper=/usr/local/libexec/t2-cpu-control-helper path found=0
+	local paths=(
+		/usr/local/bin/t2-cpu-control
+		"$helper"
+		/usr/local/libexec/t2-cpu-control-status
+		/usr/local/libexec/t2-cpu-kernel-benchmark
+		/usr/local/lib/systemd/system/t2-cpu-control.service
+		/usr/local/lib/systemd/system-sleep/t2-cpu-control
+		/usr/local/share/applications/org.t2cpucontrol.gtk.desktop
+		/usr/local/share/icons/hicolor/scalable/apps/org.t2cpucontrol.gtk.svg
+		/usr/share/polkit-1/actions/org.t2cpucontrol.policy
+		/etc/t2-cpu-control.conf
+		/var/lib/t2-cpu-control
+		/run/t2-cpu-control
+	)
 
-	[[ -e "$helper" || -e /usr/local/lib/systemd/system/t2-cpu-control.service ]] || return 0
+	for path in "${paths[@]}"; do
+		[[ -e "$path" ]] && found=1
+	done
+	[[ "$found" -eq 1 ]] || return 0
 	info "removing t2-cpu-control, replaced by t2-zone-power"
+
 	if [[ -x "$helper" && -r /run/t2-cpu-control/firmware-defaults ]]; then
 		"$helper" restore || warn "could not restore the firmware CPU limits, they return on the next boot"
 	fi
-	systemctl disable --now t2-cpu-control.service || warn "could not disable t2-cpu-control.service"
-	rm -f \
-		/usr/local/bin/t2-cpu-control \
-		/usr/local/libexec/t2-cpu-control-helper \
-		/usr/local/libexec/t2-cpu-control-status \
-		/usr/local/libexec/t2-cpu-kernel-benchmark \
-		/usr/local/lib/systemd/system/t2-cpu-control.service \
-		/usr/local/lib/systemd/system-sleep/t2-cpu-control \
-		/usr/local/share/applications/org.t2cpucontrol.gtk.desktop \
-		/usr/local/share/icons/hicolor/scalable/apps/org.t2cpucontrol.gtk.svg \
-		/usr/share/polkit-1/actions/org.t2cpucontrol.policy \
-		/etc/t2-cpu-control.conf
-	rm -rf /var/lib/t2-cpu-control /run/t2-cpu-control
+	if systemctl list-unit-files t2-cpu-control.service &>/dev/null; then
+		systemctl disable --now t2-cpu-control.service || warn "could not disable t2-cpu-control.service"
+	fi
+	rm -rf "${paths[@]}"
 	systemctl daemon-reload
 	gtk-update-icon-cache --force --ignore-theme-index /usr/local/share/icons/hicolor ||
 		warn "could not refresh the icon cache"
