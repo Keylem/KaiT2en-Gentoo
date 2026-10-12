@@ -18,7 +18,9 @@ pub struct CpuCap {
 
 impl CpuCap {
     pub fn discover(t2smc: &Path) -> Result<Option<Self>> {
-        let pstates_khz: Vec<u32> = read_string(&t2smc.join("cpu_pstates_mhz"))?
+        // Older t2smc builds lack the list, then the CPU step is left alone
+        let Ok(pstates) = read_string(&t2smc.join("cpu_pstates_mhz")) else { return Ok(None) };
+        let pstates_khz: Vec<u32> = pstates
             .split_whitespace()
             .filter_map(|mhz| mhz.parse::<u32>().ok())
             .map(|mhz| mhz * 1000)

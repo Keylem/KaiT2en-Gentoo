@@ -41,6 +41,7 @@ pub fn run() -> Result<()> {
     let mut dgpu = DGpuCap::discover()?;
     let mut last_discovery = Instant::now();
     let mut last = None;
+    let mut first_error = true;
     report_missing(&cpu, &idle, &igpu, &dgpu);
 
     while !stop.load(Ordering::Relaxed) {
@@ -64,7 +65,13 @@ pub fn run() -> Result<()> {
                 }
                 apply(&limits, cpu.as_ref(), idle.as_ref(), igpu.as_ref(), dgpu.as_ref());
             }
-            Err(error) => eprintln!("{error}"),
+            // Logged once, the read fails every tick while it lasts
+            Err(error) => {
+                if last.take().is_some() || first_error {
+                    eprintln!("{error}");
+                }
+                first_error = false;
+            }
         }
         thread::sleep(TICK);
     }
