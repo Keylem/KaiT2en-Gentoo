@@ -55,7 +55,7 @@ const DARK_PALETTE: ThemePalette = ThemePalette {
     heatpipe: (0.68, 0.82, 0.42),
     cpu: (0.92, 0.54, 0.28),
     gpu: (0.34, 0.60, 0.86),
-    idle: (0.92, 0.70, 0.30),
+    idle: (0.90, 0.28, 0.22),
     fin: (0.78, 0.52, 0.88),
     label: (0.56, 0.56, 0.56),
 };
@@ -69,7 +69,7 @@ const LIGHT_PALETTE: ThemePalette = ThemePalette {
     heatpipe: (0.42, 0.62, 0.18),
     cpu: (0.86, 0.43, 0.18),
     gpu: (0.20, 0.45, 0.75),
-    idle: (0.75, 0.48, 0.08),
+    idle: (0.80, 0.18, 0.14),
     fin: (0.55, 0.30, 0.68),
     label: (0.096, 0.096, 0.096),
 };
