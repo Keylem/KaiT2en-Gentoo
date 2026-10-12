@@ -21,7 +21,7 @@ applies them every 250 ms.
 | CPU | `scaling_max_freq` at the ACPI P-state the step indexes, step 0 is turbo | X86PlatformShim to XCPM |
 | Forced idle | `intel_powerclamp`, idle share of `100 - step` percent, at most 70 % | X86PlatformShim to XCPM |
 | dGPU | `power1_cap` from the PowerTune table, TDP down to the driver floor in 16 steps | AGPM to the AMD driver |
-| iGPU | shown, not applied yet | AGPM |
+| iGPU | i915 `gt_max_freq_mhz` = RP0 - 50 MHz per step, down to RPn | AGPM to the Intel framebuffer |
 
 The dGPU floor follows the macOS drivers. Navi 1x goes down to 40 % of its
 TDP, Polaris down to 0 W. A runtime suspended dGPU is left alone and gets its
@@ -29,7 +29,8 @@ cap once it wakes. On exit the daemon restores all limits.
 
 t2smc also tells the SMC that the dGPU has 16 steps (`HE0N`), as macOS does.
 Without it the SMC does not limit the dGPU and balances the heatpipe on the
-CPU alone.
+CPU alone. The daemon writes the iGPU step count (`HI0N`) through t2smc, from
+the RP0 to RPn range of i915.
 
 The GUI shows zone power against target, zone throttle, the applied limits
 and CPU, dGPU and fin stack temperatures. It has no settings.

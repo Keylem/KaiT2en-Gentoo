@@ -219,6 +219,7 @@ struct t2smc_device {
 	struct work_struct plimit_work;   /* notifies PLimit readers */
 	u16 cpu_pstate_mhz[T2SMC_MAX_PSTATES];
 	u8 cpu_pstate_count;
+	u8 igpu_steps;                   /* set by user space, 0 keeps the SMC preset */
 
 	/* Key cache */
 	struct mutex mutex;
@@ -1649,12 +1650,56 @@ static ssize_t cpu_pstates_mhz_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(cpu_pstates_mhz);
 
+/*
+ * Step count of the integrated GPU. AGPM reports the P-state range of the
+ * Intel driver, and only user space knows the iGPU frequency range here.
+ */
+static ssize_t smc_igpu_steps_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	struct t2smc_device *t2 = dev_get_drvdata(dev);
+	u8 count;
+	int ret;
+
+	ret = t2smc_read_key(t2, T2SMC_PLIMIT_IGPU_STEPS, &count, 1);
+	if (ret)
+		return ret;
+	return sysfs_emit(buf, "%u\n", count);
+}
+
+static ssize_t smc_igpu_steps_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t len)
+{
+	struct t2smc_device *t2 = dev_get_drvdata(dev);
+	bool present;
+	u8 count;
+	int ret;
+
+	ret = kstrtou8(buf, 0, &count);
+	if (ret)
+		return ret;
+	if (!count || count > 0x7f)
+		return -EINVAL;
+	/* With HE2N the iGPU count would go to HE0N, which no Mac here uses */
+	if (t2smc_has_key(t2, T2SMC_PLIMIT_EGPU3_STEPS, &present) || present)
+		return -EOPNOTSUPP;
+
+	ret = t2smc_write_key(t2, T2SMC_PLIMIT_IGPU_STEPS, &count, 1);
+	if (ret)
+		return ret;
+	WRITE_ONCE(t2->igpu_steps, count);
+	return len;
+}
+static DEVICE_ATTR_RW(smc_igpu_steps);
+
 static struct attribute *t2smc_thermal_attrs[] = {
 	&sensor_dev_attr_smc_thermal_level_cpu.dev_attr.attr,
 	&sensor_dev_attr_smc_thermal_level_io.dev_attr.attr,
 	&sensor_dev_attr_smc_thermal_level_gpu.dev_attr.attr,
 	&dev_attr_smc_plimit_raw.attr,
 	&dev_attr_cpu_pstates_mhz.attr,
+	&dev_attr_smc_igpu_steps.attr,
 	NULL,
 };
 
@@ -2616,6 +2661,14 @@ static void t2smc_set_plimit_ranges(struct t2smc_device *t2)
 	if (ret)
 		dev_warn(t2->dev, "failed to set %s: %d\n",
 			 T2SMC_PLIMIT_EGPU_STEPS, ret);
+
+	count = READ_ONCE(t2->igpu_steps);
+	if (!count)
+		return;
+	ret = t2smc_write_key(t2, T2SMC_PLIMIT_IGPU_STEPS, &count, 1);
+	if (ret)
+		dev_warn(t2->dev, "failed to set %s: %d\n",
+			 T2SMC_PLIMIT_IGPU_STEPS, ret);
 }
 
 /*

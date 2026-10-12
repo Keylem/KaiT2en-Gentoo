@@ -11,17 +11,16 @@ use std::{
 use signal_hook::consts::signal::{SIGINT, SIGTERM};
 
 use crate::{
-    actuators::{CpuCap, DGpuCap, ForcedIdle},
+    actuators::{CpuCap, DGpuCap, ForcedIdle, IGpuCap},
     error::{Result, ZonePowerError},
     plimit::PLimits,
-    sysfs::find_t2smc,
+    sysfs::{find_t2smc, write_value},
 };
 
 const TICK: Duration = Duration::from_millis(250);
 const REDISCOVER: Duration = Duration::from_secs(10);
 
-/// Applies the SMC power limit steps like X86PlatformShim and AGPM do on
-/// macOS. The iGPU step is not applied yet, its frequency table is not known.
+/// Applies the SMC power limit steps like X86PlatformShim and AGPM do on macOS
 pub fn run() -> Result<()> {
     let stop = Arc::new(AtomicBool::new(false));
     for signal in [SIGTERM, SIGINT] {
@@ -34,10 +33,15 @@ pub fn run() -> Result<()> {
     let t2smc = find_t2smc()?;
     let cpu = CpuCap::discover(&t2smc)?;
     let idle = ForcedIdle::discover()?;
+    let igpu = IGpuCap::discover()?;
+    if let Some(igpu) = &igpu {
+        // AGPM tells the SMC the iGPU step count through setPLimitRange
+        report(write_value(&t2smc.join("smc_igpu_steps"), igpu.steps()));
+    }
     let mut dgpu = DGpuCap::discover()?;
     let mut last_discovery = Instant::now();
     let mut last = None;
-    report_missing(&cpu, &idle, &dgpu);
+    report_missing(&cpu, &idle, &igpu, &dgpu);
 
     while !stop.load(Ordering::Relaxed) {
         if dgpu.is_none() && last_discovery.elapsed() >= REDISCOVER {
@@ -58,35 +62,47 @@ pub fn run() -> Result<()> {
                     );
                     last = Some(limits);
                 }
-                apply(&limits, cpu.as_ref(), idle.as_ref(), dgpu.as_ref());
+                apply(&limits, cpu.as_ref(), idle.as_ref(), igpu.as_ref(), dgpu.as_ref());
             }
             Err(error) => eprintln!("{error}"),
         }
         thread::sleep(TICK);
     }
 
-    restore(cpu.as_ref(), idle.as_ref(), dgpu.as_ref());
+    restore(cpu.as_ref(), idle.as_ref(), igpu.as_ref(), dgpu.as_ref());
     Ok(())
 }
 
-fn apply(limits: &PLimits, cpu: Option<&CpuCap>, idle: Option<&ForcedIdle>, dgpu: Option<&DGpuCap>) {
+fn apply(
+    limits: &PLimits,
+    cpu: Option<&CpuCap>,
+    idle: Option<&ForcedIdle>,
+    igpu: Option<&IGpuCap>,
+    dgpu: Option<&DGpuCap>,
+) {
     if let Some(cpu) = cpu {
         report(cpu.apply(cpu.target_khz(limits.cpu.step)));
     }
     if let Some(idle) = idle {
         report(idle.apply(idle.target_percent(limits.idle.step)));
     }
+    if let Some(igpu) = igpu {
+        report(igpu.apply(igpu.target_mhz(limits.igpu.step)));
+    }
     if let Some(dgpu) = dgpu {
         report(dgpu.apply(dgpu.target_w(limits.dgpu.step)));
     }
 }
 
-fn restore(cpu: Option<&CpuCap>, idle: Option<&ForcedIdle>, dgpu: Option<&DGpuCap>) {
+fn restore(cpu: Option<&CpuCap>, idle: Option<&ForcedIdle>, igpu: Option<&IGpuCap>, dgpu: Option<&DGpuCap>) {
     if let Some(cpu) = cpu {
         report(cpu.restore());
     }
     if let Some(idle) = idle {
         report(idle.restore());
+    }
+    if let Some(igpu) = igpu {
+        report(igpu.restore());
     }
     if let Some(dgpu) = dgpu {
         report(dgpu.restore());
@@ -99,12 +115,15 @@ fn report(result: Result<()>) {
     }
 }
 
-fn report_missing(cpu: &Option<CpuCap>, idle: &Option<ForcedIdle>, dgpu: &Option<DGpuCap>) {
+fn report_missing(cpu: &Option<CpuCap>, idle: &Option<ForcedIdle>, igpu: &Option<IGpuCap>, dgpu: &Option<DGpuCap>) {
     if cpu.is_none() {
         eprintln!("no CPU P-states from t2smc or no cpufreq policy, CPU step is not applied");
     }
     if idle.is_none() {
         eprintln!("intel_powerclamp is missing, idle step is not applied");
+    }
+    if igpu.is_none() {
+        eprintln!("no i915 RP0/RPn in sysfs, iGPU step is not applied");
     }
     if dgpu.is_none() {
         eprintln!("no supported dGPU found yet, dGPU step is not applied");

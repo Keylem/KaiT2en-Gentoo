@@ -43,6 +43,7 @@ struct ThemePalette {
     gpu: (f64, f64, f64),
     idle: (f64, f64, f64),
     fin: (f64, f64, f64),
+    igpu: (f64, f64, f64),
     label: (f64, f64, f64),
 }
 
@@ -57,6 +58,7 @@ const DARK_PALETTE: ThemePalette = ThemePalette {
     gpu: (0.34, 0.60, 0.86),
     idle: (0.90, 0.28, 0.22),
     fin: (0.78, 0.52, 0.88),
+    igpu: (0.40, 0.78, 0.72),
     label: (0.56, 0.56, 0.56),
 };
 
@@ -71,6 +73,7 @@ const LIGHT_PALETTE: ThemePalette = ThemePalette {
     gpu: (0.20, 0.45, 0.75),
     idle: (0.80, 0.18, 0.14),
     fin: (0.55, 0.30, 0.68),
+    igpu: (0.15, 0.55, 0.50),
     label: (0.096, 0.096, 0.096),
 };
 
@@ -124,6 +127,11 @@ impl Sample {
     fn cpu_limit_percent(&self) -> Option<f64> {
         let applied = self.applied;
         Some(f64::from(applied.cpu_cap_mhz?) * 100.0 / f64::from(applied.cpu_max_mhz?))
+    }
+
+    fn igpu_limit_percent(&self) -> Option<f64> {
+        let applied = self.applied;
+        Some(f64::from(applied.igpu_cap_mhz?) * 100.0 / f64::from(applied.igpu_max_mhz?))
     }
 
     fn dgpu_limit_percent(&self) -> Option<f64> {
@@ -234,7 +242,7 @@ fn build_ui(app: &Application) {
 
     root.append(&panel("Zone power", &ui.power_graph, "Heatpipe  •  CPU  •  dGPU"));
     root.append(&panel("Zone throttle", &ui.throttle_graph, "Heatpipe  •  CPU  •  dGPU"));
-    root.append(&panel("Applied limits", &ui.limit_graph, "CPU clock  •  dGPU power  •  Forced idle"));
+    root.append(&panel("Applied limits", &ui.limit_graph, "CPU clock  •  iGPU clock  •  dGPU power  •  Forced idle"));
     root.append(&panel("Temperatures", &ui.temperature_graph, "CPU  •  dGPU  •  Fin stack"));
 
     let footer = GtkBox::new(Orientation::Horizontal, 8);
@@ -345,6 +353,7 @@ fn connect_drawings(model: &Rc<RefCell<AppModel>>, ui: &Rc<UiRefs>) {
             let palette = current_palette();
             let plot = draw_history_panel(cr, width as f64, height as f64, "%");
             draw_history_series(cr, plot, &model.series(Sample::cpu_limit_percent), palette.cpu);
+            draw_history_series(cr, plot, &model.series(Sample::igpu_limit_percent), palette.igpu);
             draw_history_series(cr, plot, &model.series(Sample::dgpu_limit_percent), palette.gpu);
             draw_history_series(cr, plot, &model.series(|s| s.applied.idle_percent.map(f64::from)), palette.idle);
         });
@@ -374,7 +383,7 @@ fn sync_ui(model: &AppModel, ui: &UiRefs) {
     ui.cpu_step.set_label(&format_step(plimits.cpu.step, plimits.cpu.hard, applied.cpu_cap_mhz, " MHz"));
     ui.dgpu_step.set_label(&format_step(plimits.dgpu.step, plimits.dgpu.hard, applied.dgpu_cap_w, " W"));
     ui.idle_step.set_label(&format_step(plimits.idle.step, plimits.idle.hard, applied.idle_percent, " %"));
-    ui.igpu_step.set_label(&format!("{}{}", plimits.igpu.step, if plimits.igpu.hard { "!" } else { "" }));
+    ui.igpu_step.set_label(&format_step(plimits.igpu.step, plimits.igpu.hard, applied.igpu_cap_mhz, " MHz"));
 
     ui.power_graph.queue_draw();
     ui.throttle_graph.queue_draw();
@@ -570,6 +579,7 @@ fn legend_markup(legend: &str) -> String {
                 "CPU" | "CPU clock" => palette.cpu,
                 "dGPU" | "dGPU power" => palette.gpu,
                 "Forced idle" => palette.idle,
+                "iGPU clock" => palette.igpu,
                 "Fin stack" => palette.fin,
                 _ => palette.label,
             };

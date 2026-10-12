@@ -172,3 +172,49 @@ fn floor_ratio(device: &Path) -> Option<f64> {
         _ => None,
     }
 }
+
+/// AGPM passes the iGPU step to the Intel framebuffer, whose P-state table
+/// runs from RP0 down to RPn one ratio per state (PMOBJECT::initPState2Freq).
+/// A Gen9 ratio is 50 MHz.
+pub struct IGpuCap {
+    max_freq: PathBuf,
+    rp0_mhz: u32,
+    rpn_mhz: u32,
+}
+
+const IGPU_RATIO_MHZ: u32 = 50;
+
+impl IGpuCap {
+    pub fn discover() -> Result<Option<Self>> {
+        for rp0 in glob_paths("/sys/class/drm/card*/gt_RP0_freq_mhz")? {
+            let Some(card) = rp0.parent() else { continue };
+            return Ok(Some(Self {
+                rp0_mhz: read_value(&rp0)?,
+                rpn_mhz: read_value(&card.join("gt_RPn_freq_mhz"))?,
+                max_freq: card.join("gt_max_freq_mhz"),
+            }));
+        }
+        Ok(None)
+    }
+
+    /// Number of P-states AGPM reports to the SMC
+    pub fn steps(&self) -> u32 {
+        (self.rp0_mhz - self.rpn_mhz) / IGPU_RATIO_MHZ + 1
+    }
+
+    pub fn target_mhz(&self, step: u8) -> u32 {
+        let index = u32::from(step).min(self.steps() - 1);
+        (self.rp0_mhz - index * IGPU_RATIO_MHZ).max(self.rpn_mhz)
+    }
+
+    pub fn apply(&self, mhz: u32) -> Result<()> {
+        if read_value::<u32>(&self.max_freq).ok() != Some(mhz) {
+            write_value(&self.max_freq, mhz)?;
+        }
+        Ok(())
+    }
+
+    pub fn restore(&self) -> Result<()> {
+        self.apply(self.rp0_mhz)
+    }
+}

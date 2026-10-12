@@ -53,6 +53,8 @@ pub struct Applied {
     pub idle_percent: Option<u32>,
     pub dgpu_cap_w: Option<u32>,
     pub dgpu_tdp_w: Option<u32>,
+    pub igpu_cap_mhz: Option<u32>,
+    pub igpu_max_mhz: Option<u32>,
 }
 
 impl Applied {
@@ -65,8 +67,15 @@ impl Applied {
             idle_percent: powerclamp_state(),
             dgpu_cap_w: amdgpu_watts("power1_cap"),
             dgpu_tdp_w: amdgpu_watts("power1_cap_default"),
+            igpu_cap_mhz: i915_mhz("gt_max_freq_mhz"),
+            igpu_max_mhz: i915_mhz("gt_RP0_freq_mhz"),
         }
     }
+}
+
+fn i915_mhz(file: &str) -> Option<u32> {
+    let path = glob_paths(&format!("/sys/class/drm/card*/{file}")).ok()?.into_iter().next()?;
+    read_value(&path).ok()
 }
 
 fn powerclamp_state() -> Option<u32> {
