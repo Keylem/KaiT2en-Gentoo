@@ -27,17 +27,21 @@ The dGPU floor follows the macOS drivers. Navi 1x goes down to 40 % of its
 TDP, Polaris down to 0 W. A runtime suspended dGPU is left alone and gets its
 cap once it wakes. On exit the daemon restores all limits.
 
-t2smc also tells the SMC that the dGPU has 16 steps (`HE0N`), as macOS does.
-Without it the SMC does not limit the dGPU and balances the heatpipe on the
-CPU alone. The daemon writes the iGPU step count (`HI0N`) through t2smc, from
-the RP0 to RPn range of i915.
+Like AGPM on macOS, the daemon tells the SMC how many steps each GPU has
+(`HE0N` for the dGPU, `HI0N` for the iGPU, through t2smc). The dGPU gets 16
+steps once a supported dGPU is found, the iGPU gets the RP0 to RPn range of
+i915. Without the dGPU count the SMC does not limit the dGPU and balances the
+heatpipe on the CPU alone.
+
+The daemon only acts on the data version 3 layout of the SMC power limits
+(`smc_plimit_version`). Other versions are not known yet.
 
 The GUI shows zone power against target, zone throttle, the applied limits
 and CPU, dGPU and fin stack temperatures. It has no settings.
 
 ## Requirements
 
-- t2smc with `smc_plimit_raw` and `cpu_pstates_mhz`
+- t2smc with `smc_plimit_raw`, `smc_plimit_version`, `cpu_pstates_mhz` and the GPU step count files
 - `intel_pstate` or another cpufreq driver
 - `intel_powerclamp`
 

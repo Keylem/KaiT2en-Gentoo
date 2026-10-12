@@ -111,7 +111,8 @@ pub struct DGpuCap {
     floor_w: u32,
 }
 
-const DGPU_STEPS: u32 = 16;
+/// AGPM drives the dGPU through power states 0 to 15 on every Mac with one
+pub const DGPU_STEPS: u32 = 16;
 
 impl DGpuCap {
     pub fn discover() -> Result<Option<Self>> {

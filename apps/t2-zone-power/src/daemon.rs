@@ -11,10 +11,10 @@ use std::{
 use signal_hook::consts::signal::{SIGINT, SIGTERM};
 
 use crate::{
-    actuators::{CpuCap, DGpuCap, ForcedIdle, IGpuCap},
+    actuators::{CpuCap, DGPU_STEPS, DGpuCap, ForcedIdle, IGpuCap},
     error::{Result, ZonePowerError},
     plimit::PLimits,
-    sysfs::{find_t2smc, write_value},
+    sysfs::{find_t2smc, read_value, write_value},
 };
 
 const TICK: Duration = Duration::from_millis(250);
@@ -31,6 +31,17 @@ pub fn run() -> Result<()> {
     }
 
     let t2smc = find_t2smc()?;
+
+    // Only the data version 3 layout is known, see AppleSMC::smcGetPLimits
+    let version: u8 = read_value(&t2smc.join("smc_plimit_version")).unwrap_or(0);
+    if version != 3 {
+        eprintln!("SMC power limit data version {version} is not supported, nothing is applied");
+        while !stop.load(Ordering::Relaxed) {
+            thread::sleep(TICK);
+        }
+        return Ok(());
+    }
+
     let cpu = CpuCap::discover(&t2smc)?;
     let idle = ForcedIdle::discover()?;
     let igpu = IGpuCap::discover()?;
@@ -39,6 +50,7 @@ pub fn run() -> Result<()> {
         report(write_value(&t2smc.join("smc_igpu_steps"), igpu.steps()));
     }
     let mut dgpu = DGpuCap::discover()?;
+    set_dgpu_steps(&t2smc, &dgpu);
     let mut last_discovery = Instant::now();
     let mut last = None;
     let mut first_error = true;
@@ -47,6 +59,7 @@ pub fn run() -> Result<()> {
     while !stop.load(Ordering::Relaxed) {
         if dgpu.is_none() && last_discovery.elapsed() >= REDISCOVER {
             dgpu = DGpuCap::discover()?;
+            set_dgpu_steps(&t2smc, &dgpu);
             last_discovery = Instant::now();
         }
 
@@ -113,6 +126,13 @@ fn restore(cpu: Option<&CpuCap>, idle: Option<&ForcedIdle>, igpu: Option<&IGpuCa
     }
     if let Some(dgpu) = dgpu {
         report(dgpu.restore());
+    }
+}
+
+/// AGPM tells the SMC the dGPU step count only when it drives a dGPU
+fn set_dgpu_steps(t2smc: &std::path::Path, dgpu: &Option<DGpuCap>) {
+    if dgpu.is_some() {
+        report(write_value(&t2smc.join("smc_dgpu_steps"), DGPU_STEPS));
     }
 }
 

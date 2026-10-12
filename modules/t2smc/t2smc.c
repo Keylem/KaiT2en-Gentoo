@@ -123,15 +123,14 @@
 /*
  * Keys that select the PLimit data layout and hold the GPU step counts.
  * X86PlatformPlugin::setPLimitRange uses HE0N and HI0N for the discrete and
- * the integrated GPU unless HE2N exists.
+ * the integrated GPU, or HE2N and HE0N when HE2N exists.
  */
 #define T2SMC_PLIMIT_GEN        "RGEN"
 #define T2SMC_PLIMIT_VERSION    "DPLM"
 #define T2SMC_PLIMIT_EGPU_STEPS "HE0N"
 #define T2SMC_PLIMIT_IGPU_STEPS "HI0N"
 #define T2SMC_PLIMIT_EGPU3_STEPS "HE2N"
-/* AGPM gives the discrete GPU power states 0 to 15 on MacBookPro15,1 and 16,1 */
-#define T2SMC_PLIMIT_EGPU_COUNT 16
+enum { T2SMC_DGPU, T2SMC_IGPU, T2SMC_GPUS };
 /* The SMC CPU step indexes this list, as in X86PlatformPlugin::getCPUPStates */
 #define T2SMC_MAX_PSTATES       32
 #define FLOAT_TYPE      "flt "
@@ -219,7 +218,8 @@ struct t2smc_device {
 	struct work_struct plimit_work;   /* notifies PLimit readers */
 	u16 cpu_pstate_mhz[T2SMC_MAX_PSTATES];
 	u8 cpu_pstate_count;
-	u8 igpu_steps;                   /* set by user space, 0 keeps the SMC preset */
+	u8 gpu_steps[T2SMC_GPUS];        /* set by user space, 0 keeps the SMC preset */
+	u8 plimit_version;               /* data layout of the PLimit words, 0 if unknown */
 
 	/* Key cache */
 	struct mutex mutex;
@@ -1650,29 +1650,41 @@ static ssize_t cpu_pstates_mhz_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(cpu_pstates_mhz);
 
+static const char *t2smc_gpu_steps_key(struct t2smc_device *t2, int gpu)
+{
+	bool he2n;
+
+	if (t2smc_has_key(t2, T2SMC_PLIMIT_EGPU3_STEPS, &he2n))
+		he2n = false;
+	if (gpu == T2SMC_DGPU)
+		return he2n ? T2SMC_PLIMIT_EGPU3_STEPS : T2SMC_PLIMIT_EGPU_STEPS;
+	return he2n ? T2SMC_PLIMIT_EGPU_STEPS : T2SMC_PLIMIT_IGPU_STEPS;
+}
+
 /*
- * Step count of the integrated GPU. AGPM reports the P-state range of the
- * Intel driver, and only user space knows the iGPU frequency range here.
+ * Step counts of the GPUs. AGPM reports them only for GPUs it drives, and
+ * only user space knows which GPUs are there and their ranges.
  */
-static ssize_t smc_igpu_steps_show(struct device *dev,
-				   struct device_attribute *attr, char *buf)
+static ssize_t t2smc_gpu_steps_show(struct device *dev,
+				    struct device_attribute *attr, char *buf)
 {
 	struct t2smc_device *t2 = dev_get_drvdata(dev);
+	int gpu = to_sensor_dev_attr(attr)->index;
 	u8 count;
 	int ret;
 
-	ret = t2smc_read_key(t2, T2SMC_PLIMIT_IGPU_STEPS, &count, 1);
+	ret = t2smc_read_key(t2, t2smc_gpu_steps_key(t2, gpu), &count, 1);
 	if (ret)
 		return ret;
 	return sysfs_emit(buf, "%u\n", count);
 }
 
-static ssize_t smc_igpu_steps_store(struct device *dev,
-				    struct device_attribute *attr,
-				    const char *buf, size_t len)
+static ssize_t t2smc_gpu_steps_store(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t len)
 {
 	struct t2smc_device *t2 = dev_get_drvdata(dev);
-	bool present;
+	int gpu = to_sensor_dev_attr(attr)->index;
 	u8 count;
 	int ret;
 
@@ -1681,17 +1693,27 @@ static ssize_t smc_igpu_steps_store(struct device *dev,
 		return ret;
 	if (!count || count > 0x7f)
 		return -EINVAL;
-	/* With HE2N the iGPU count would go to HE0N, which no Mac here uses */
-	if (t2smc_has_key(t2, T2SMC_PLIMIT_EGPU3_STEPS, &present) || present)
-		return -EOPNOTSUPP;
 
-	ret = t2smc_write_key(t2, T2SMC_PLIMIT_IGPU_STEPS, &count, 1);
+	ret = t2smc_write_key(t2, t2smc_gpu_steps_key(t2, gpu), &count, 1);
 	if (ret)
 		return ret;
-	WRITE_ONCE(t2->igpu_steps, count);
+	WRITE_ONCE(t2->gpu_steps[gpu], count);
 	return len;
 }
-static DEVICE_ATTR_RW(smc_igpu_steps);
+
+static SENSOR_DEVICE_ATTR(smc_dgpu_steps, 0644, t2smc_gpu_steps_show,
+			  t2smc_gpu_steps_store, T2SMC_DGPU);
+static SENSOR_DEVICE_ATTR(smc_igpu_steps, 0644, t2smc_gpu_steps_show,
+			  t2smc_gpu_steps_store, T2SMC_IGPU);
+
+static ssize_t smc_plimit_version_show(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct t2smc_device *t2 = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%u\n", t2->plimit_version);
+}
+static DEVICE_ATTR_RO(smc_plimit_version);
 
 static struct attribute *t2smc_thermal_attrs[] = {
 	&sensor_dev_attr_smc_thermal_level_cpu.dev_attr.attr,
@@ -1699,7 +1721,9 @@ static struct attribute *t2smc_thermal_attrs[] = {
 	&sensor_dev_attr_smc_thermal_level_gpu.dev_attr.attr,
 	&dev_attr_smc_plimit_raw.attr,
 	&dev_attr_cpu_pstates_mhz.attr,
-	&dev_attr_smc_igpu_steps.attr,
+	&sensor_dev_attr_smc_dgpu_steps.dev_attr.attr,
+	&sensor_dev_attr_smc_igpu_steps.dev_attr.attr,
+	&dev_attr_smc_plimit_version.attr,
 	NULL,
 };
 
@@ -2641,34 +2665,48 @@ static void t2smc_log_plimit_keys(struct t2smc_device *t2)
 		dev_info(t2->dev, "PLimit keys:%s\n", line);
 }
 
-/*
- * Tell the SMC how many power limit steps the discrete GPU has, as
- * X86PlatformPlugin::setPLimitRange does for AGPM. Without it the SMC
- * cannot limit the GPU and balances the shared heatpipe on the CPU alone.
- */
+/* The SMC forgets the step counts over sleep, user space set them once */
 static void t2smc_set_plimit_ranges(struct t2smc_device *t2)
 {
-	u8 count = T2SMC_PLIMIT_EGPU_COUNT;
-	bool present;
-	int ret;
+	const char *key;
+	u8 count;
+	int gpu, ret;
 
-	if (t2smc_has_key(t2, T2SMC_PLIMIT_EGPU3_STEPS, &present) || present)
-		return;
-	if (t2smc_has_key(t2, T2SMC_PLIMIT_EGPU_STEPS, &present) || !present)
-		return;
+	for (gpu = 0; gpu < T2SMC_GPUS; gpu++) {
+		count = READ_ONCE(t2->gpu_steps[gpu]);
+		if (!count)
+			continue;
+		key = t2smc_gpu_steps_key(t2, gpu);
+		ret = t2smc_write_key(t2, key, &count, 1);
+		if (ret)
+			dev_warn(t2->dev, "failed to set %s: %d\n", key, ret);
+	}
+}
 
-	ret = t2smc_write_key(t2, T2SMC_PLIMIT_EGPU_STEPS, &count, 1);
-	if (ret)
-		dev_warn(t2->dev, "failed to set %s: %d\n",
-			 T2SMC_PLIMIT_EGPU_STEPS, ret);
+/*
+ * As AppleSMC::smcInitPLimits: RGEN 3 means data version 3, otherwise the
+ * data size of DPLM selects it, 5 for version 3, 4 for 2 and 3 for 1.
+ */
+static void t2smc_read_plimit_version(struct t2smc_device *t2)
+{
+	struct t2smc_entry *entry;
+	u8 gen;
 
-	count = READ_ONCE(t2->igpu_steps);
-	if (!count)
+	entry = t2smc_get_entry_by_key(t2, T2SMC_PLIMIT_GEN);
+	if (!IS_ERR(entry) && entry->len == 1 &&
+	    !t2smc_read_key(t2, T2SMC_PLIMIT_GEN, &gen, 1) && gen == 3) {
+		t2->plimit_version = 3;
 		return;
-	ret = t2smc_write_key(t2, T2SMC_PLIMIT_IGPU_STEPS, &count, 1);
-	if (ret)
-		dev_warn(t2->dev, "failed to set %s: %d\n",
-			 T2SMC_PLIMIT_IGPU_STEPS, ret);
+	}
+
+	entry = t2smc_get_entry_by_key(t2, T2SMC_PLIMIT_VERSION);
+	if (IS_ERR(entry))
+		return;
+	switch (entry->len) {
+	case 5: t2->plimit_version = 3; break;
+	case 4: t2->plimit_version = 2; break;
+	case 3: t2->plimit_version = 1; break;
+	}
 }
 
 /*
@@ -2796,7 +2834,7 @@ static int t2smc_probe(struct platform_device *pdev)
 	t2smc_log_shutdown_cause(t2);
 	t2smc_log_x86_state(t2);
 	t2smc_log_plimit_keys(t2);
-	t2smc_set_plimit_ranges(t2);
+	t2smc_read_plimit_version(t2);
 	t2smc_read_cpu_pstates(t2);
 
 	ret = t2smc_register_hwmon(t2);
