@@ -190,7 +190,7 @@ fn build_ui(app: &Application) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("T2 Zone Power")
-        .default_width(380)
+        .default_width(456)
         .default_height(720)
         .build();
     window.set_resizable(true);
