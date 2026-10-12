@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::VecDeque, process::Command, rc::Rc, time::Duration};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, time::Duration};
 
 use adw::StyleManager;
 use gtk4::{
@@ -15,7 +15,6 @@ use crate::{
 const APP_ID: &str = "org.t2zonepower.gtk";
 const APP_VERSION: &str = "0.01";
 const HISTORY_CAPACITY: usize = 90;
-const SERVICE_NAME: &str = "t2-zonepowerd.service";
 
 fn kait2en_brand() -> DrawingArea {
     let pixbuf = gtk4::gdk_pixbuf::Pixbuf::from_file("/usr/local/share/kait2en/kait2en-wordmark.png")
@@ -129,8 +128,6 @@ impl Sample {
 struct AppModel {
     sensors: Option<SmcSensors>,
     history: VecDeque<Sample>,
-    daemon_active: bool,
-    ticks: u32,
 }
 
 impl AppModel {
@@ -138,8 +135,6 @@ impl AppModel {
         let mut model = Self {
             sensors: find_t2smc().ok().map(|t2smc| SmcSensors::discover(&t2smc)),
             history: VecDeque::with_capacity(HISTORY_CAPACITY),
-            daemon_active: daemon_active(),
-            ticks: 0,
         };
         model.tick();
         model
@@ -151,10 +146,6 @@ impl AppModel {
             self.history.pop_front();
         }
         self.history.push_back(Sample::read(sensors));
-        self.ticks = self.ticks.wrapping_add(1);
-        if self.ticks % 5 == 0 {
-            self.daemon_active = daemon_active();
-        }
     }
 
     fn latest(&self) -> Sample {
@@ -166,13 +157,6 @@ impl AppModel {
     }
 }
 
-fn daemon_active() -> bool {
-    Command::new("systemctl")
-        .args(["is-active", "--quiet", SERVICE_NAME])
-        .status()
-        .is_ok_and(|status| status.success())
-}
-
 struct UiRefs {
     heatpipe: Label,
     cpu_zone: Label,
@@ -182,7 +166,6 @@ struct UiRefs {
     dgpu_step: Label,
     idle_step: Label,
     igpu_step: Label,
-    status: Label,
     power_graph: DrawingArea,
     throttle_graph: DrawingArea,
     limit_graph: DrawingArea,
@@ -246,12 +229,6 @@ fn build_ui(app: &Application) {
     root.append(&panel("Zone throttle", &ui.throttle_graph, "Heatpipe  •  CPU  •  dGPU"));
     root.append(&panel("Applied limits", &ui.limit_graph, "CPU clock  •  dGPU power  •  Forced idle"));
     root.append(&panel("Temperatures", &ui.temperature_graph, "CPU  •  dGPU  •  Fin stack"));
-
-    ui.status.set_halign(Align::Start);
-    ui.status.set_wrap(true);
-    ui.status.set_xalign(0.0);
-    ui.status.add_css_class("meta-text");
-    root.append(&ui.status);
 
     let footer = GtkBox::new(Orientation::Horizontal, 8);
     let donate = LinkButton::builder()
@@ -317,7 +294,6 @@ fn build_widgets() -> UiRefs {
         dgpu_step: make_value(),
         idle_step: make_value(),
         igpu_step: make_value(),
-        status: make_value(),
         power_graph: make_graph(),
         throttle_graph: make_graph(),
         limit_graph: make_graph(),
@@ -389,14 +365,6 @@ fn sync_ui(model: &AppModel, ui: &UiRefs) {
     ui.dgpu_step.set_label(&format_step(plimits.dgpu.step, plimits.dgpu.hard, applied.dgpu_cap_w, " W"));
     ui.idle_step.set_label(&format_step(plimits.idle.step, plimits.idle.hard, applied.idle_percent, " %"));
     ui.igpu_step.set_label(&format!("{}{}", plimits.igpu.step, if plimits.igpu.hard { "!" } else { "" }));
-
-    ui.status.set_label(if model.sensors.is_none() {
-        "t2smc is not loaded, no SMC zones to show."
-    } else if !model.daemon_active {
-        "t2-zonepowerd is not running, the SMC power limits are not applied."
-    } else {
-        "t2-zonepowerd applies the SMC power limits. The iGPU step is shown but not applied yet."
-    });
 
     ui.power_graph.queue_draw();
     ui.throttle_graph.queue_draw();
