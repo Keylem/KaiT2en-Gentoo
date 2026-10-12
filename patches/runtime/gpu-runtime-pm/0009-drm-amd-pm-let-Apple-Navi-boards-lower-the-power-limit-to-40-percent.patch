@@ -9,6 +9,14 @@ steps from the TDP down to 40 % of it.
 
 Allow the same range on Apple boards when the pptable has no lower bound.
 
+Tested on a MacBookPro16,1 (Navi 14, 50 W TDP) under combined CPU and GPU
+load, with a user space daemon that applies the SMC steps. The power cap
+range is now 20 to 50 W. When the shared heatpipe ran over its target, the
+SMC lowered the dGPU zone target from 70 to 45 W and asked for dGPU steps 2
+to 5. The cap followed at 46, 44, 42 and 40 W, and the SMC handed the freed
+budget back to the CPU, from 1300 to 2200 MHz. Without this change the cap
+stays at 50 W and the CPU alone has to absorb the heatpipe limit.
+
 Signed-off-by: Andre Eikmeyer <dev@deq.rocks>
 ---
 --- a/drivers/gpu/drm/amd/pm/swsmu/smu11/navi10_ppt.c
