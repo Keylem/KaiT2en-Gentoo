@@ -1727,8 +1727,29 @@ static struct attribute *t2smc_thermal_attrs[] = {
 	NULL,
 };
 
+/* Hide the step count of a GPU whose SMC key this Mac does not have */
+static umode_t t2smc_thermal_is_visible(struct kobject *kobj,
+					struct attribute *attr, int index)
+{
+	struct t2smc_device *t2 = dev_get_drvdata(kobj_to_dev(kobj));
+	bool present;
+	int gpu;
+
+	if (attr == &sensor_dev_attr_smc_dgpu_steps.dev_attr.attr)
+		gpu = T2SMC_DGPU;
+	else if (attr == &sensor_dev_attr_smc_igpu_steps.dev_attr.attr)
+		gpu = T2SMC_IGPU;
+	else
+		return attr->mode;
+
+	if (t2smc_has_key(t2, t2smc_gpu_steps_key(t2, gpu), &present) || !present)
+		return 0;
+	return attr->mode;
+}
+
 static const struct attribute_group t2smc_thermal_group = {
 	.attrs = t2smc_thermal_attrs,
+	.is_visible = t2smc_thermal_is_visible,
 };
 
 static const struct attribute_group *t2smc_hwmon_groups[] = {
