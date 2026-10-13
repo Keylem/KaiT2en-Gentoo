@@ -120,18 +120,30 @@ refresh_repository() {
 
 run_project_installer() {
 	local mode=$1 result_label
+	local distro installer_script
 	case "$mode" in
 		initial) result_label=installation ;;
 		update) result_label=update ;;
 		*) die "Unknown KaiT2en installer mode: $mode" ;;
 	esac
+	distro=fedora
+	if [[ -r /etc/os-release ]]; then
+		# shellcheck disable=SC1091
+		. /etc/os-release
+		if [[ ${ID:-} == gentoo || " ${ID_LIKE:-} " == *" gentoo "* ]]; then
+			distro=gentoo
+		fi
+	fi
+	installer_script="./scripts/$distro/install.sh"
+	[[ -x "$installer_script" ]] ||
+		die "No KaiT2en installer script found for $distro ($installer_script)."
 	refresh_repository
 
 	printf '\nStarting the regular KaiT2en installer.\n'
 	printf 'Administrator access is required.\n\n'
 	sudo -v
 	cd "$repository"
-	if ! sudo env "KAIT2EN_CARGO_CLEAN=${KAIT2EN_CARGO_CLEAN:-1}" bash ./scripts/fedora/install.sh; then
+	if ! sudo env "KAIT2EN_CARGO_CLEAN=${KAIT2EN_CARGO_CLEAN:-1}" bash "$installer_script"; then
 		printf '\nKaiT2en attempted all independent installation steps, but reported errors.\n' >&2
 		printf 'Review the error summary above and rerun kait2en-install after resolving them.\n' >&2
 		printf 'The installation is not marked complete.\n' >&2

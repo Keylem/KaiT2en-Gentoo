@@ -6,8 +6,8 @@ source "$APP_DIR/../../scripts/fedora/lib.sh"
 
 require_root
 require_repo_root
-require_fedora
-require_command dnf sudo systemctl udevadm getent groupadd usermod
+require_systemd
+require_command sudo systemctl udevadm getent groupadd usermod
 
 target_user="${SUDO_USER:-}"
 [[ -n "$target_user" && "$target_user" != root ]] ||
@@ -55,7 +55,25 @@ clean_build() {
 }
 
 install_dependencies() {
-	dnf install -y adwaita-sans-fonts cargo gcc libinput-devel make pkgconf-pkg-config rust systemd-devel
+	local distro
+	distro=$(detect_distribution)
+	case "$distro" in
+		fedora)
+			dnf install -y adwaita-sans-fonts cargo gcc libinput-devel make pkgconf-pkg-config rust systemd-devel
+			;;
+		gentoo)
+			emerge --ask=n --quiet \
+				dev-lang/rust \
+				sys-devel/gcc \
+				dev-build/make \
+				dev-util/pkgconf \
+				dev-libs/libinput \
+				sys-apps/systemd
+			;;
+		*)
+			warn "automatic dependency installation is unsupported on this distribution; continuing"
+			;;
+	esac
 	require_command cargo make
 }
 
