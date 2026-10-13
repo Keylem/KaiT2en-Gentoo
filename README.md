@@ -2,10 +2,10 @@
   <img src="assets/kait2en-fedora.jpeg" alt="KAIT2EN logo" width="720">
 </p>
 
-# KAIT2EN Fedora
+# KAIT2EN
 
-KAIT2EN brings cutting edge T2 Mac support to stock Fedora using DKMS modules.
-You will receive kernel updates directly from Fedora and the latest T2 modules from us.
+KAIT2EN brings cutting edge T2 Mac support to Linux systems using DKMS modules
+and systemd-integrated services.
 
 [Docs](https://kait2en.org/documentation.html) |
 [Blog](https://kait2en.org/blog.html) |
@@ -18,6 +18,17 @@ Follow the [installation guide](https://kait2en.org/documentation.html#overview)
 
 Some Rust apps are built during installation, and their Cargo target folders
 are cleaned by default. Set `KAIT2EN_CARGO_CLEAN=0` to keep them.
+
+### Gentoo (systemd)
+
+The repository now includes a Gentoo installer entrypoint intended for Portage
+integration:
+
+```bash
+sudo ./scripts/gentoo/install.sh
+```
+
+This path expects a Gentoo system running systemd.
 
 ## Community
 

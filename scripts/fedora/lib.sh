@@ -115,12 +115,46 @@ require_repo_root() {
 		fail "repository layout is incomplete"
 }
 
-require_fedora() {
+load_os_release() {
 	[[ -r /etc/os-release ]] || fail "/etc/os-release is missing"
 	# shellcheck disable=SC1091
 	. /etc/os-release
-	[[ ${ID:-} == fedora || " ${ID_LIKE:-} " == *" fedora "* ]] ||
+}
+
+os_matches() {
+	local expected=$1
+	[[ ${ID:-} == "$expected" || " ${ID_LIKE:-} " == *" $expected "* ]]
+}
+
+detect_distribution() {
+	load_os_release
+	if os_matches fedora; then
+		printf '%s\n' fedora
+		return 0
+	fi
+	if os_matches gentoo; then
+		printf '%s\n' gentoo
+		return 0
+	fi
+	printf '%s\n' unknown
+}
+
+require_systemd() {
+	require_command systemctl
+	[[ -d /run/systemd/system ]] ||
+		fail "systemd must be running"
+}
+
+require_fedora() {
+	load_os_release
+	os_matches fedora ||
 		fail "this script is Fedora-only"
+}
+
+require_gentoo() {
+	load_os_release
+	os_matches gentoo ||
+		fail "this script is Gentoo-only"
 }
 
 # Every T2 MacBook Pro has a Touch Bar; the MacBook Air, Mac mini, iMac and
@@ -186,7 +220,7 @@ require_min_kernel() {
 	minor="${BASH_REMATCH[2]}"
 
 	if (( major < min_major || (major == min_major && minor < min_minor) )); then
-		fail "KaiT2en requires Linux kernel ${min_major}.${min_minor} or newer. Update Fedora first, reboot into the updated kernel, then run this installer again. Current kernel: $release"
+		fail "KaiT2en requires Linux kernel ${min_major}.${min_minor} or newer. Update the system first, reboot into the updated kernel, then run this installer again. Current kernel: $release"
 	fi
 }
 
