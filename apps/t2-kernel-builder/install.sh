@@ -4,8 +4,54 @@ APP_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 source "$APP_DIR/../../scripts/fedora/lib.sh"
 require_root
 install_kait2en_fonts
-require_fedora
-require_command dnf install find rm
+require_command find rm
+
+install_dependencies() {
+	local distro
+	distro=$(detect_distribution)
+	case "$distro" in
+		fedora)
+			require_command dnf
+			dnf install -y bc binutils bison cpio curl dkms dracut dwarves \
+				elfutils-libelf-devel flex gcc git-core gtk4 kmod libadwaita make \
+				openssl-devel patch perl-core python3-gobject python3-pip polkit rpm-build \
+				rsync tar xz
+			;;
+		gentoo)
+			require_command emerge
+			emerge --ask=n --quiet \
+				sys-devel/bc \
+				sys-devel/binutils \
+				sys-devel/bison \
+				app-arch/cpio \
+				net-misc/curl \
+				sys-kernel/dkms \
+				sys-kernel/dracut \
+				sys-devel/dwarves \
+				dev-libs/elfutils \
+				sys-devel/flex \
+				sys-devel/gcc \
+				dev-vcs/git \
+				gui-libs/gtk \
+				sys-apps/kmod \
+				gui-libs/libadwaita \
+				dev-build/make \
+				dev-libs/openssl \
+				sys-devel/patch \
+				dev-lang/perl \
+				dev-python/pygobject \
+				dev-python/pip \
+				sys-auth/polkit \
+				app-arch/rpm \
+				sys-apps/rsync \
+				app-arch/tar \
+				app-arch/xz-utils
+			;;
+		*)
+			warn "automatic dependency installation is unsupported on this distribution; continuing"
+			;;
+	esac
+}
 
 required_files=(
 	"$APP_DIR/t2-kernel-builder.py"
@@ -23,10 +69,7 @@ done
 find "$APP_DIR/engine/configs" -maxdepth 1 -type f -name '*.config' -print -quit |
 	grep -q . || fail "t2-kernel-builder bundle contains no kernel configs"
 
-dnf install -y bc binutils bison cpio curl dkms dracut dwarves \
-	elfutils-libelf-devel flex gcc git-core gtk4 kmod libadwaita make \
-	openssl-devel patch perl-core python3-gobject python3-pip polkit rpm-build \
-	rsync tar xz
+install_dependencies
 if ! python3 -c 'import importlib.metadata; raise SystemExit(importlib.metadata.version("kconfiglib") != "14.1.1a4")' \
 		2>/dev/null; then
 	PIP_NO_INPUT=1 python3 -m pip install --root-user-action=ignore --prefix=/usr/local \

@@ -4,7 +4,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/lib.sh"
 
 require_root
 require_repo_root
-require_fedora
+require_systemd
 require_command install systemctl readlink timeout
 
 SCRIPT_SRC="$REPO_ROOT/scripts/fedora/kait2en-suspend.sh"

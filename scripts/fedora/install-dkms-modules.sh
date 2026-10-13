@@ -4,7 +4,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/lib.sh"
 
 require_root
 require_repo_root
-require_fedora
+require_systemd
 require_command dkms make install rm chown mktemp depmod sed tar find grep
 require_kernel_headers
 

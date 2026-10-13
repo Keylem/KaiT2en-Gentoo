@@ -5,8 +5,29 @@ source "$APP_DIR/../../scripts/fedora/lib.sh"
 
 require_root
 install_kait2en_fonts
-require_fedora
-require_command cargo make sudo
+require_command make sudo
+
+install_dependencies() {
+	local distro
+	distro=$(detect_distribution)
+	case "$distro" in
+		fedora)
+			require_command dnf
+			dnf install -y cargo gcc make
+			;;
+		gentoo)
+			require_command emerge
+			emerge --ask=n --quiet \
+				dev-lang/rust \
+				sys-devel/gcc \
+				dev-build/make
+			;;
+		*)
+			warn "automatic dependency installation is unsupported on this distribution; continuing"
+			;;
+	esac
+	require_command cargo
+}
 
 is_supported_model() {
 	local class dev model vendor has_intel=0 has_amd=0
@@ -45,6 +66,8 @@ is_supported_model() {
 if ! is_supported_model; then
 	exit 0
 fi
+
+install_dependencies
 
 target_user="${SUDO_USER:-}"
 [[ -n "$target_user" && "$target_user" != root ]] ||

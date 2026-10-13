@@ -4,7 +4,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/lib.sh"
 
 require_root
 require_repo_root
-require_fedora
+require_systemd
 require_command basename cp cut getent id install readlink rm runuser sed systemctl
 
 UCM_SRC="$REPO_ROOT/modules/t2bce_audio-alsa-ucm-conf/ucm2"
