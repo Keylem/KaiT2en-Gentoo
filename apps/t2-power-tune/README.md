@@ -27,3 +27,6 @@ sudo reboot
 ```
 
 `/run/t2-power-tune/items.json` is volatile and disappears on reboot.
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

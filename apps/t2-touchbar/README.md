@@ -136,3 +136,6 @@ license. The KAIT2EN implementation is GPL-3.0-or-later. The upstream notice
 is in `THIRD-PARTY-NOTICES.md`.
 
 Touch ID is a trademark of Apple Inc. This project is not affiliated with Apple.
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

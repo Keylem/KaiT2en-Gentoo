@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# On Gentoo, only the overlay may install these files.
+if [[ -r /etc/os-release ]]; then
+    # shellcheck source=/dev/null
+    source /etc/os-release
+    if [[ ${ID:-} == gentoo || " ${ID_LIKE:-} " == *" gentoo "* ]]; then
+        printf '%s\n' 'Gentoo installation must use the keylem Portage overlay.' >&2
+        printf '%s\n' 'See https://github.com/Keylem/gentoo-repo and docs/GENTOO.md.' >&2
+        exit 2
+    fi
+fi
+
 
 APP_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 source "$APP_DIR/../../scripts/fedora/lib.sh"

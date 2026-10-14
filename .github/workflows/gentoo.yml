@@ -2,11 +2,14 @@ name: Gentoo installer QA
 on:
   push:
     paths:
-      - 'scripts/gentoo/install.sh'
+      - 'scripts/gentoo/**'
+      - 'apps/**/install.sh'
+      - 'scripts/tests/gentoo-portage-wrappers.sh'
       - '.github/workflows/gentoo.yml'
   pull_request:
     paths:
-      - 'scripts/gentoo/install.sh'
+      - 'scripts/gentoo/**'
+      - 'scripts/tests/gentoo-portage-wrappers.sh'
       - '.github/workflows/gentoo.yml'
 jobs:
   static:
@@ -17,5 +20,6 @@ jobs:
         shell: bash
         run: |
           bash -n scripts/gentoo/install.sh
+          bash scripts/tests/gentoo-portage-wrappers.sh
           bash scripts/gentoo/install.sh --help
           ! grep -Eq 'make install|dkms install|systemctl enable' scripts/gentoo/install.sh

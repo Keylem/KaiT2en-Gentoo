@@ -75,3 +75,6 @@ the daemon owns are exposed while the trackpad driver is loaded at:
 /sys/module/t2_precision_trackpad/parameters/force_click_threshold_percent
 /sys/module/t2_precision_trackpad/parameters/force_click_enabled
 ```
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

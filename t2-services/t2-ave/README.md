@@ -12,3 +12,6 @@ Build and install userspace with `make build` and `make install`. Use `PREFIX`
 and `DESTDIR` for packaging. Building the kernel module requires matching kernel
 headers and the BCE core's symbols. The Fedora DKMS stack stages the module from
 `kernel/t2bce_ave/` alongside the core.
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

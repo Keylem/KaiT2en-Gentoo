@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-
-source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/../fedora/lib.sh"
-
-require_root
-require_repo_root
-require_gentoo
-require_systemd
-
-exec bash "$SCRIPT_DIR/../fedora/install-alsa-ucm.sh"
+# Portage compatibility shim: install-alsa-ucm.sh (no /usr/local, DKMS or Fedora actions)
+set -euo pipefail
+PACKAGES=( "app-misc/t2-alsa-ucm" )
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/package-wrapper.sh"
