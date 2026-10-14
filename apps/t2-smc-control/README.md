@@ -66,3 +66,6 @@ in the desktop stays as it is. The dates live in
 `/var/lib/t2-smc-control/gauging`.
 
 The app auto-detects `t2smc`/`macsmc` under `/sys/class/hwmon`.
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

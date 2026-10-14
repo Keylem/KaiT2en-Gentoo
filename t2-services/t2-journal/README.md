@@ -61,3 +61,6 @@ RemoteXPC discovery first connects directly to the T2's fixed port `59602`
 and reads the current sysdiagnose service port from its service directory.
 If direct discovery fails, it falls back to a dynamic-port scan because we
 don't know yet if `59602` is universal.
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

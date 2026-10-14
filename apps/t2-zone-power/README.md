@@ -58,3 +58,6 @@ sudo make install
 
 `make install` installs the binary, the desktop file, the icon and
 `t2-zonepowerd.service`, and enables the service.
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

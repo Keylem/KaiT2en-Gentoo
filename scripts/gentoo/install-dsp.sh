@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-
-source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/../fedora/lib.sh"
-
-require_root
-require_repo_root
-require_gentoo
-require_systemd
-
-exec bash "$SCRIPT_DIR/../fedora/install-dsp.sh"
+# Portage compatibility shim: install-dsp.sh (no /usr/local, DKMS or Fedora actions)
+set -euo pipefail
+PACKAGES=( "app-misc/t2-dsp" )
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/package-wrapper.sh"

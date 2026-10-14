@@ -168,3 +168,6 @@ You need a Rust toolchain and the usual native build dependencies for GTK4 and L
 ## Support
 
 [Fund my bugs](https://donate.stripe.com/eVq14n8a7agh2lQdqq14400)
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

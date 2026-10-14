@@ -83,3 +83,11 @@ audio DSP profiles and scripts, is GPL-3.0-or-later. The full breakdown is in
 The code licenses do not grant the KAIT2EN name or logo. Their use, and what
 the project stands for, are described in [TRADEMARK.md](TRADEMARK.md) and
 [VALUES.md](VALUES.md).
+
+The individual source `scripts/gentoo/install-*.sh` entrypoints are now only
+Portage compatibility wrappers; no legacy Fedora, DKMS, or `/usr/local`
+installations are performed by them. For **all applications**, systemd setup,
+kernel sources and the Gentoo + OpenZFS kernel option see
+[docs/GENTOO.md](docs/GENTOO.md) and the overlay's application guide.
+The source GUI kernel builder still targets Fedora; on Gentoo install
+`app-misc/t2-kernel-builder` for the native Portage CLI instead.

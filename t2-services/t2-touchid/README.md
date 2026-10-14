@@ -74,3 +74,6 @@ Rebooting or shutting down the x86 side does not power-cycle the T2. It only
 sleeps bridgeOS, so this survives Linux reboots and only needs doing again
 after a real T2 power loss or reset by forced shutdown. Then log into macOS
 once and the bridge picks it up on the next prompt, no restart needed.
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).

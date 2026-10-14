@@ -15,3 +15,6 @@ supported hardware. It can also be run directly from the repository:
 ```bash
 sudo ./apps/t2-dgpu-control/install.sh
 ```
+
+
+> **Gentoo systemd:** Install and update this component with the `keylem` Portage overlay. Do not use the `sudo make install` or Fedora standalone installer shown above. See [Gentoo integration](../../docs/GENTOO.md).
