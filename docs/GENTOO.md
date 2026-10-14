@@ -31,8 +31,13 @@ and the T2 Linux Wi-Fi/Bluetooth renaming tool.
 2. `sudo emerge -av app-misc/kait2en-wifi-tools`
 3. `kait2en-wifi-setup prepare sonoma` as your **normal user**.
 4. `sudo kait2en-wifi-setup stage "$HOME/.cache/kait2en-wifi/firmware.tar"`
-5. `sudo emerge -av sys-firmware/kait2en-wifi-firmware`
-6. Reboot and connect through NetworkManager.
+5. Review Apple's applicable proprietary firmware terms. If accepted, allow
+   this package's nonfree license only:
+   `echo 'sys-firmware/kait2en-wifi-firmware all-rights-reserved' |
+   sudo tee /etc/portage/package.license/kait2en-wifi`
+   (create `/etc/portage/package.license/` first if it does not exist).
+6. `sudo emerge -av sys-firmware/kait2en-wifi-firmware`
+7. Reboot and connect through NetworkManager.
 
 Use `ventura` or `monterey` if the current recovery image lacks your
 firmware. The required files depend on your exact Broadcom hardware.

@@ -54,7 +54,9 @@ retrieves an Apple recovery image using the approach in
 renames the Broadcom firmware using the T2 Linux tool, and creates a local
 archive. Run `sudo kait2en-wifi-setup stage
 "$HOME/.cache/kait2en-wifi/firmware.tar"` followed by
-`sudo emerge -av sys-firmware/kait2en-wifi-firmware` and reboot.
+`after accepting the package-specific
+`all-rights-reserved` license in `/etc/portage/package.license/`, run
+`sudo emerge -av sys-firmware/kait2en-wifi-firmware`` and reboot.
 No Apple firmware is included in this source repo or automatically downloaded
 by Portage. This process needs temporary wired/USB Internet access.
 The overlay's [beginner README](https://github.com/Keylem/gentoo-repo)
