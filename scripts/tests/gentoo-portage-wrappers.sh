@@ -17,4 +17,11 @@ for wrapper in "${root}"/scripts/gentoo/install-*.sh; do
     fi
 done
 bash -n "${root}/scripts/gentoo/package-wrapper.sh"
-echo "PASS: Gentoo installer entrypoints delegate to Portage"
+for installer in "${root}"/apps/*/install.sh "${root}"/apps/deprecated/*/install.sh; do
+    [[ -f ${installer} ]] || continue
+    bash -n "${installer}"
+    grep -q "Gentoo installation must use the keylem Portage overlay" "${installer}" || {
+        echo "Standalone installer lacks Gentoo protection: ${installer}" >&2; exit 1;
+    }
+done
+echo "PASS: Gentoo entrypoints are Portage-only and direct app installers are guarded"

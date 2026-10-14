@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'scripts/gentoo/**'
+      - 'apps/**/install.sh'
       - 'scripts/tests/gentoo-portage-wrappers.sh'
       - '.github/workflows/gentoo.yml'
   pull_request:
