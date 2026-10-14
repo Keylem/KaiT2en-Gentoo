@@ -45,6 +45,21 @@ sudo ./scripts/gentoo/install.sh --pretend
 sudo ./scripts/gentoo/install.sh
 ```
 
+**Wi-Fi on a pure Linux MacBook Pro (no macOS partition):**
+Once Gentoo is running with a temporary USB tether or Ethernet connection,
+install `app-misc/kait2en-wifi-tools` from the overlay, then run
+`kait2en-wifi-setup prepare sonoma` **as your normal user**. The tool
+retrieves an Apple recovery image using the approach in
+[kholia/OSX-KVM](https://github.com/kholia/OSX-KVM/blob/master/fetch-macOS-v2.py),
+renames the Broadcom firmware using the T2 Linux tool, and creates a local
+archive. Run `sudo kait2en-wifi-setup stage
+"$HOME/.cache/kait2en-wifi/firmware.tar"` followed by
+`sudo emerge -av sys-firmware/kait2en-wifi-firmware` and reboot.
+No Apple firmware is included in this source repo or automatically downloaded
+by Portage. This process needs temporary wired/USB Internet access.
+The overlay's [beginner README](https://github.com/Keylem/gentoo-repo)
+starts from T2 boot-security setup and explains every step.
+
 The entrypoint requires a running systemd Gentoo system and an already configured
 overlay. It invokes Portage only; it does not build or install files via
 `make install`, DKMS or direct systemd enablement. Confirm proposed
