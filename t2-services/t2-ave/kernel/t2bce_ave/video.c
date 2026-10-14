@@ -7,6 +7,7 @@
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-ctrls.h>
@@ -741,7 +742,16 @@ static void t2bce_ave_device_run(void *priv)
 	ctx->force_keyframe = false;
 
 	vb2_set_plane_payload(dst_vb, 0, encoded_size);
+/*
+ * Linux 6.19 removed the copy_frame_flags argument. On earlier kernels,
+ * skip copying the frame-type flags: this encoder sets KEYFRAME/PFRAME
+ * explicitly below.
+ */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 19, 0)
+	v4l2_m2m_buf_copy_metadata(src_buf, dst_buf, false);
+#else
 	v4l2_m2m_buf_copy_metadata(src_buf, dst_buf);
+#endif
 	dst_buf->sequence = src_buf->sequence;
 	dst_buf->flags &= ~(V4L2_BUF_FLAG_KEYFRAME | V4L2_BUF_FLAG_PFRAME |
 			    V4L2_BUF_FLAG_BFRAME);
