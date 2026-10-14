@@ -12,6 +12,10 @@ on:
   pull_request:
     paths:
       - 'scripts/gentoo/**'
+      - 'modules/t2bce_stack/Makefile'
+      - 't2-services/t2-ave/kernel/t2bce_ave/Makefile'
+      - 'scripts/tests/gentoo-kernel-makevars.sh'
+      - 'apps/**/install.sh'
       - 'scripts/tests/gentoo-portage-wrappers.sh'
       - '.github/workflows/gentoo.yml'
 jobs:
