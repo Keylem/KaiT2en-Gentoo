@@ -2,7 +2,7 @@
 
 The maintained Gentoo-facing package integration lives in
 [Keylem/gentoo-repo](https://github.com/Keylem/gentoo-repo).
-Use its [installation and app guide](https://github.com/Keylem/gentoo-repo/blob/main/docs/INSTALL-AND-USE.md).
+Use its [installation and app guide](https://github.com/Keylem/gentoo-repo/blob/main/metadata/docs/INSTALL-AND-USE.md).
 That guide explains *every app*, driver, systemd unit, daemon, group, and
 the two kernel workflows. It is updated independently from this source tree.
 
