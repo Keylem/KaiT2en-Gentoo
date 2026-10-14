@@ -1,0 +1,21 @@
+name: Gentoo installer QA
+on:
+  push:
+    paths:
+      - 'scripts/gentoo/install.sh'
+      - '.github/workflows/gentoo.yml'
+  pull_request:
+    paths:
+      - 'scripts/gentoo/install.sh'
+      - '.github/workflows/gentoo.yml'
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Gentoo Portage entrypoint
+        shell: bash
+        run: |
+          bash -n scripts/gentoo/install.sh
+          bash scripts/gentoo/install.sh --help
+          ! grep -Eq 'make install|dkms install|systemctl enable' scripts/gentoo/install.sh
