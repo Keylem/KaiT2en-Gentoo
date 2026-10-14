@@ -12,12 +12,9 @@ ccflags-y += ${MY_CFLAGS}
 ccflags-y += -I$(src) -I$(src)/$(T2BCE_CORE_SRC)/include
 CC += ${MY_CFLAGS}
 
-KVERSION := $(KERNELRELEASE)
-ifeq ($(origin KERNELRELEASE), undefined)
-KVERSION := $(shell uname -r)
-endif
-
-KDIR := /lib/modules/$(KVERSION)/build
+# Honour externally selected Gentoo kernel release and build tree.
+KVERSION ?= $(if $(KERNELRELEASE),$(KERNELRELEASE),$(shell uname -r))
+KDIR ?= /lib/modules/$(KVERSION)/build
 MODDEST ?= /lib/modules/$(KVERSION)/updates
 PWD := $(shell pwd)
 T2BCE_CORE_SYMBOLS := $(abspath $(T2BCE_AVE_DIR)/$(T2BCE_CORE_SRC)/Module.symvers)

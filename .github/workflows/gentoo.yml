@@ -3,6 +3,9 @@ on:
   push:
     paths:
       - 'scripts/gentoo/**'
+      - 'modules/t2bce_stack/Makefile'
+      - 't2-services/t2-ave/kernel/t2bce_ave/Makefile'
+      - 'scripts/tests/gentoo-kernel-makevars.sh'
       - 'apps/**/install.sh'
       - 'scripts/tests/gentoo-portage-wrappers.sh'
       - '.github/workflows/gentoo.yml'
@@ -21,5 +24,6 @@ jobs:
         run: |
           bash -n scripts/gentoo/install.sh
           bash scripts/tests/gentoo-portage-wrappers.sh
+          bash scripts/tests/gentoo-kernel-makevars.sh
           bash scripts/gentoo/install.sh --help
           ! grep -Eq 'make install|dkms install|systemctl enable' scripts/gentoo/install.sh

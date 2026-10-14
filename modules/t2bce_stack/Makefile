@@ -4,12 +4,9 @@ obj-m += t2bce_vhci/
 obj-m += t2bce_audio/
 obj-m += t2bce_ave/
 
-KVERSION := $(KERNELRELEASE)
-ifeq ($(origin KERNELRELEASE), undefined)
-KVERSION := $(shell uname -r)
-endif
-
-KDIR := /lib/modules/$(KVERSION)/build
+# Honour externally selected Gentoo kernel release and build tree.
+KVERSION ?= $(if $(KERNELRELEASE),$(KERNELRELEASE),$(shell uname -r))
+KDIR ?= /lib/modules/$(KVERSION)/build
 PWD := $(shell pwd)
 
 .PHONY: all clean
