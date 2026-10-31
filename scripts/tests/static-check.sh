@@ -264,6 +264,12 @@ grep -Fq 'uses: actions/upload-artifact@v6' .github/workflows/installer.yml
 grep -Fq 'uses: actions/download-artifact@v7' .github/workflows/installer.yml
 ! grep -InE 'uses: actions/(checkout|upload-artifact|download-artifact)@v4' \
 	.github/workflows/installer.yml
+# Gentoo installer QA must use the Node-24-compatible checkout action too.
+checkout_ref=$(grep -Eo 'actions/checkout@v[0-9]+' .github/workflows/gentoo.yml)
+[[ "$checkout_ref" =~ ^actions/checkout@v[0-9]+$ ]]
+checkout_major=${checkout_ref##*@v}
+((checkout_major >= 7))
+
 
 patch_name=$(
 	# shellcheck disable=SC1091
